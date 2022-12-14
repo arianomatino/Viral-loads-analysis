@@ -1,0 +1,113 @@
+---
+title: "Análise de cargas virais"
+author: "Ariano Matino"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+#Loading libraries
+library(rmarkdown)
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(foreign)
+```
+
+```{r}
+#importing data
+dados_cv <- read.csv("C:/Users/Ariano.Matino/Google Drive/AVANTE/Análise Clinicas móveis/Clinicas móveis_v2/dados_cv.csv")
+head(dados_cv)
+```
+
+```{r}
+#Changing group and time variables to factor
+y<-c("group","time")
+dados_cv[y] <- lapply(dados_cv[y], factor)
+```
+
+```{r}
+#Visual Exploration
+plot_infants<-ggplot(dados_cv, aes(semanas_correct, cv_infants, col=group))+
+    geom_line()+
+  geom_vline(xintercept = 14, linetype="dotted")+
+  scale_fill_discrete(labels=c("Control", "Intervention"))+
+  labs(title = "Viral Load samples collected in the period of Analysis for infants",
+       x= "weeks",y = 'Viral loads')
+plot_infants 
+```
+
+```{r}
+plot_adults<-ggplot(dados_cv,aes(semanas_correct,cv_adults, col=group))+
+  geom_line()+
+  geom_vline(xintercept = 14, linetype="dotted")+
+  scale_fill_discrete(labels=c("Control", "Intervention"))+
+  labs(title = "Viral Load samples collected in the period of Analysis for adults",
+       x= "weeks",y = 'Viral loads')
+plot_adults
+```
+
+```{r}
+#Graph lm infants (trends)
+
+plot_infants2<-ggplot(data = dados_cv,aes(x=semanas_correct))+
+    geom_smooth(data=filter(dados_cv, semanas_correct<=14),
+              aes(y=cv_infants, col=group),
+              method="lm",
+              se=TRUE)+
+    geom_smooth(data=filter(dados_cv, semanas_correct>=14),
+              aes(y=cv_infants, col=group), 
+              method="lm",
+              se=TRUE)+
+    geom_vline(xintercept = 14, linetype="dotted")+
+    scale_fill_discrete(labels=c("Control", "Intervention"))+
+    labs(x= "weeks",y = 'Viral loads')
+
+plot_infants2 + labs(tag = "Infants", caption = "Data Source: Power BI Report-FGH, 2022")
+```
+
+```{r}
+#Graph lm adults (trends)
+plot_adults2<-ggplot(data = dados_cv,aes(x=semanas_correct))+
+  geom_smooth(data=filter(dados_cv, semanas_correct<=14),
+              aes(y=cv_adults, col=group),
+              method="lm",
+              se=TRUE)+
+  geom_smooth(data=filter(dados_cv, semanas_correct>=14),
+              aes(y=cv_adults, col=group), 
+              method="lm",
+              se=TRUE)+
+  geom_vline(xintercept = 14, linetype="dotted") +
+  scale_fill_discrete(labels=c("Control", "Intervention"))+
+  labs(x= "weeks",y = 'Viral loads')
+
+plot_adults2 + labs(tag = "Adults", caption = "Data Source: Power BI Report-FGH, 2022")
+```
+
+```{r}
+# Diff in Diff regression 
+#model with logs
+log_did_infants=lm(log(cv_infants)~(group*time), data = dados_cv)
+log_did_adults=lm(log(cv_adults)~(group*time), data = dados_cv)
+
+#Log model for infants
+summary(log_did_infants)
+#Log model for adults
+summary(log_did_adults)
+```
+
+```{r}
+#models with absolute values
+did_infants=lm(cv_infants~(group*time), data = dados_cv)
+did_adults=lm(cv_adults~(group*time), data = dados_cv)
+
+#Log model for infants
+summary(did_infants)
+#Log model for adults
+summary(did_adults)
+
+#Confidence intervals for log models
+confint(log_did_adults, level=0.95)
+confint(log_did_infants, level=0.95)
+```
+
